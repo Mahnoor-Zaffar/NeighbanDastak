@@ -1,20 +1,31 @@
-# API (with security hardening)
+# API Module Summary
 
 Base path: `/api/v1`
 
-## System
+## Authentication model (MVP)
+
+This phase uses a demo-role header:
+
+- `X-Demo-Role: admin`
+- `X-Demo-Role: doctor`
+
+No production auth/token flow is implemented yet.
+
+## Module endpoints
+
+### System
 
 - `GET /health`
 
-## Patients
+### Patients
 
 - `GET /patients`
 - `POST /patients`
 - `GET /patients/{patient_id}`
 - `PATCH /patients/{patient_id}`
-- `DELETE /patients/{patient_id}`
+- `DELETE /patients/{patient_id}` (soft archive)
 
-## Appointments
+### Appointments
 
 - `GET /appointments`
 - `POST /appointments`
@@ -22,18 +33,28 @@ Base path: `/api/v1`
 - `PATCH /appointments/{appointment_id}`
 - `DELETE /appointments/{appointment_id}`
 
-## Visits
+### Visits
 
 - `POST /visits`
 - `GET /visits/{visit_id}`
 - `PATCH /visits/{visit_id}`
 
-## Notes
+## Role behavior summary
 
-- This phase uses the `X-Demo-Role` header instead of full authentication.
-- `admin` can manage patients, manage appointment statuses, and delete appointments.
-- `doctor` can read/search patients, create/update appointments, and create/read visits.
-- Error responses are standardized as `{ error: { code, message, details? }, request_id }`.
-- Request IDs are emitted in the `X-Request-ID` response header.
-- Write operations are protected by basic in-memory rate limiting.
-- Prescriptions, notifications, billing, analytics, attachments, and patient portal APIs are intentionally not implemented yet.
+- `admin`: full patient lifecycle, appointment CRUD including delete, visit CRUD actions
+- `doctor`: read/search patients, create/update appointments, create/read/update visits
+
+## Response conventions
+
+- standardized errors: `{ "error": { "code", "message", "details?" }, "request_id" }`
+- `X-Request-ID` response header mirrors request context
+- validation errors use `error.code = "validation_error"`
+
+## Deferred APIs (intentional)
+
+- prescriptions
+- notifications
+- billing
+- analytics
+- attachments
+- patient self-service portals

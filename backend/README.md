@@ -33,3 +33,33 @@ as `DEBUG` do not leak into the app unexpectedly.
   sanitized metadata.
 - Rate limiting is process-local in memory; it is suitable for a single MVP node
   and not distributed deployments.
+
+## Testing
+
+Run from the `backend/` directory:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -e ".[dev]"
+pytest
+```
+
+Targeted test runs:
+
+```bash
+pytest tests/test_auth_api.py tests/test_integration_flows.py
+pytest tests/test_schema_validation.py tests/test_audit_service_unit.py
+```
+
+Test database notes:
+
+- tests use an isolated in-memory SQLite database (`sqlite://`) with `StaticPool`
+- schema is dropped/recreated around each test for repeatable runs
+- settings cache is cleared for each test so environment overrides do not leak
+
+## Deployment note
+
+For environment separation and hosting recommendations, see:
+
+- `../docs/deployment.md`

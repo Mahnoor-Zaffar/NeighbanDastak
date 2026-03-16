@@ -35,8 +35,24 @@ npm run dev
 Set `VITE_API_URL` if your backend is not on the default
 `http://localhost:8000/api/v1`.
 
+## Frontend confidence checks
+
+```bash
+cd frontend
+npm run build
+```
+
+This project currently relies on TypeScript + production build checks as the
+practical frontend confidence baseline for MVP scope.
+
 ## Current limitations by design
 
 - No production authentication yet (demo role simulation only)
 - No reminders/notifications/calendar UX
 - No prescriptions, billing, analytics, attachments, or patient portal views
+
+## Presentation note
+
+For screenshot checklist and demo walkthrough script, see:
+
+- `../docs/portfolio.md`

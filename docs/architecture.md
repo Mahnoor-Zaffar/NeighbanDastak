@@ -1,16 +1,43 @@
-# Security Hardening Architecture
+# Architecture Summary (MVP)
 
-## Current backend modules
+## System shape
 
-- `app/core`: settings, logging, RBAC
-- `app/db/models`: SQLAlchemy patient, appointment, and visit models
-- `app/db/models/audit_log.py`: SQLAlchemy audit log model
-- `app/repositories`: patient, appointment, visit, and audit-log data access
-- `app/services`: patient and scheduling business logic + audit capture
-- `app/api/routes`: health, patient, appointment, and visit endpoints
-- `app/api/deps`: demo-role permission dependencies
-- `app/core/errors.py`: standardized error response handlers
-- `app/core/middleware.py`: request ID + in-memory rate limiting middleware
+NigehbaanDastak is a modular FastAPI backend with a lightweight React frontend.
+The backend follows a route -> service -> repository pattern to keep business
+logic and data access separated and testable.
+
+## Backend module map
+
+- `app/main.py`: app factory, middleware wiring, API router mount
+- `app/core`: config, logging, RBAC enums, error handlers, request/rate-limit middleware
+- `app/db`: SQLAlchemy session + shared base model
+- `app/db/models`: patient, appointment, visit, and audit log entities
+- `app/schemas`: Pydantic request/response validation
+- `app/repositories`: persistence and query logic per entity
+- `app/services`: domain logic for patient, appointment, visit, and audit flows
+- `app/api/routes`: HTTP endpoints grouped by module
+- `app/api/deps`: demo-role access dependency
+
+## Frontend module map
+
+- `src/app`: router + API client
+- `src/components`: shared layout, auth gate, forms
+- `src/pages`: patient, appointment, visit, and demo auth pages
+
+## Request flow
+
+1. Request enters middleware (request ID, rate limit).
+2. Route validates payload and permissions.
+3. Service applies business rules and audit events.
+4. Repository reads/writes SQLAlchemy models.
+5. Standardized JSON response or standardized error shape is returned.
+
+## Security posture for MVP
+
+- demo roles (`X-Demo-Role`) are used instead of production auth
+- request IDs are attached to all responses
+- write endpoints are protected by in-memory rate limiting
+- sensitive actions write audit events with sanitized metadata
 
 ## Scope intentionally deferred
 
@@ -20,9 +47,3 @@
 - analytics
 - attachments
 - patient self-service portals
-
-## Security assumptions and limitations
-
-- Demo-role headers are still used instead of production authentication.
-- Audit logging covers sensitive state changes but not external SIEM shipping.
-- Rate limiting is intentionally lightweight and single-instance only.

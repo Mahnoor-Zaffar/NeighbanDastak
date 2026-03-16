@@ -260,3 +260,63 @@ def test_doctor_can_update_visit_notes(client) -> None:
     )
     assert update_response.status_code == 200
     assert update_response.json()["diagnosis_summary"] == "Tension headache"
+
+
+def test_list_appointments_can_filter_by_patient_and_status(
+    client,
+    admin_headers,
+    doctor_headers,
+    create_patient,
+    create_appointment,
+) -> None:
+    patient_a_response = create_patient(record_number="PAT-FLT-001", headers=admin_headers)
+    patient_b_response = create_patient(record_number="PAT-FLT-002", headers=admin_headers)
+    assert patient_a_response.status_code == 201
+    assert patient_b_response.status_code == 201
+    patient_a = patient_a_response.json()
+    patient_b = patient_b_response.json()
+
+    appointment_a_response = create_appointment(patient_id=patient_a["id"], headers=doctor_headers)
+    appointment_b_response = create_appointment(patient_id=patient_b["id"], headers=doctor_headers)
+    assert appointment_a_response.status_code == 201
+    assert appointment_b_response.status_code == 201
+    appointment_b_id = appointment_b_response.json()["id"]
+
+    client.patch(
+        f"/api/v1/appointments/{appointment_b_id}",
+        json={"status": "cancelled"},
+        headers=doctor_headers,
+    )
+
+    patient_filtered = client.get(f"/api/v1/appointments?patient_id={patient_a['id']}", headers=doctor_headers)
+    assert patient_filtered.status_code == 200
+    assert patient_filtered.json()["total"] == 1
+    assert patient_filtered.json()["items"][0]["patient_id"] == patient_a["id"]
+
+    cancelled_filtered = client.get("/api/v1/appointments?status=cancelled", headers=doctor_headers)
+    assert cancelled_filtered.status_code == 200
+    assert cancelled_filtered.json()["total"] == 1
+    assert cancelled_filtered.json()["items"][0]["id"] == appointment_b_id
+
+
+def test_create_appointment_rejects_archived_patient(
+    client,
+    admin_headers,
+    doctor_headers,
+    create_patient,
+    appointment_payload_factory,
+) -> None:
+    patient_response = create_patient(record_number="PAT-ARCH-001", headers=admin_headers)
+    assert patient_response.status_code == 201
+    patient = patient_response.json()
+
+    archive_response = client.delete(f"/api/v1/patients/{patient['id']}", headers=admin_headers)
+    assert archive_response.status_code == 200
+
+    appointment_response = client.post(
+        "/api/v1/appointments",
+        json=appointment_payload_factory(patient["id"]),
+        headers=doctor_headers,
+    )
+    assert appointment_response.status_code == 404
+    assert appointment_response.json()["error"]["message"] == "Patient not found"

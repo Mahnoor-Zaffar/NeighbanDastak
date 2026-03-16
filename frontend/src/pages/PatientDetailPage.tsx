@@ -12,7 +12,7 @@ export function PatientDetailPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const resolvedPatientId = patientId;
+    const resolvedPatientId = patientId ?? "";
     if (!resolvedPatientId) {
       setPatient(null);
       setIsLoading(false);

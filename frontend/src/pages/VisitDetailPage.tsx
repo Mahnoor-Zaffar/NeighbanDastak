@@ -13,7 +13,7 @@ export function VisitDetailPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const resolvedVisitId = visitId;
+    const resolvedVisitId = visitId ?? "";
     if (!resolvedVisitId) {
       setVisit(null);
       setPatient(null);

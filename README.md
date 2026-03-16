@@ -16,7 +16,7 @@ patient self-service modules.
 - audit logging for sensitive state changes
 - standardized API error responses with request IDs
 - basic in-memory write-rate limiting for abuse protection
-- minimal React demo for patient + appointment + visit forms and list/detail pages
+- Phase 6 frontend demo with role-aware navigation, patient/appointment/visit pages, and basic loading/empty/error handling
 - Docker Compose for local development
 
 ## Local development

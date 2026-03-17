@@ -48,9 +48,16 @@ Role behavior and response conventions:
 
 - [`docs/api.md`](docs/api.md)
 
-## Local Setup (Clean Path)
+## Local Setup (Complete Working Guide)
 
-### Option A: Docker Compose (recommended)
+### Prerequisites
+
+- PostgreSQL installed and running locally
+- Node.js (v18+) for frontend
+- Python (v3.8+) for backend
+- Docker (optional, for containerized setup)
+
+### Option A: Docker Compose (Recommended for Production-like Setup)
 
 ```bash
 cd infra
@@ -59,30 +66,190 @@ docker compose up --build
 docker compose exec backend alembic upgrade head
 ```
 
-- backend: `http://localhost:8000/api/v1`
-- frontend: `http://localhost:5173`
-- health: `http://localhost:8000/api/v1/health`
+**Services:**
+- Backend: `http://localhost:8000/api/v1`
+- Frontend: `http://localhost:5173`
+- Health Check: `http://localhost:8000/api/v1/health`
 
-### Option B: Run services separately
+### Option B: Local Development Setup (Step-by-Step)
 
-Backend:
+#### 1. Database Setup
+
+```bash
+# Start PostgreSQL service
+brew services start postgres
+
+# Create database
+createdb nigehbaan_dastak
+
+# Create postgres user (if doesn't exist)
+psql postgres
+CREATE USER postgres WITH SUPERUSER PASSWORD 'postgres';
+\q
+```
+
+#### 2. Backend Setup
 
 ```bash
 cd backend
+
+# Create and activate virtual environment
 python3 -m venv .venv
 source .venv/bin/activate
+
+# Install dependencies
 pip install -e ".[dev]"
+
+# Configure environment
+cp .env.example .env
+# Ensure .env contains:
+# ND_POSTGRES_SERVER=localhost
+# ND_POSTGRES_PORT=5432
+# ND_POSTGRES_USER=postgres
+# ND_POSTGRES_PASSWORD=postgres
+# ND_POSTGRES_DB=nigehbaan_dastak
+# ND_CORS_ORIGINS=["http://localhost:5173"]
+
+# Run database migrations
 alembic upgrade head
-uvicorn app.main:app --reload
+
+# Start backend server
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-Frontend:
+#### 3. Frontend Setup
 
 ```bash
 cd frontend
+
+# Install dependencies
 npm install
+
+# Configure API URL (optional, defaults to localhost:8000/api/v1)
+echo "VITE_API_URL=http://localhost:8000/api/v1" > .env
+
+# Start frontend development server
 npm run dev
 ```
+
+#### 4. Verify Connection
+
+1. **Backend Health**: Open `http://localhost:8000/api/v1/health` in browser
+2. **Frontend**: Open `http://localhost:5173` - should show "API Status: Connected"
+3. **API Documentation**: Open `http://localhost:8000/api/v1/docs` for Swagger UI
+
+### Troubleshooting Common Issues
+
+#### Port 8000 Already in Use
+```bash
+# Find process using port 8000
+lsof -i :8000
+
+# Kill the process
+sudo lsof -ti :8000 | xargs kill -9
+```
+
+#### Database Connection Issues
+```bash
+# Check PostgreSQL is running
+brew services list | grep postgres
+
+# Verify database exists
+psql -l
+
+# Test connection
+psql -h localhost -U postgres -d nigehbaan_dastak
+```
+
+#### Frontend "Failed to Fetch" API Error
+1. Ensure backend is running on port 8000
+2. Check CORS origins in backend `.env` includes `http://localhost:5173`
+3. Verify API URL in frontend `.env` is correct
+
+## Application Working Overview
+
+### Architecture Flow
+
+```
+Frontend (React)     Backend (FastAPI)     Database (PostgreSQL)
+     |                      |                       |
+     | HTTP Requests        | SQLAlchemy ORM        |
+     |---------------------->|                       |
+     |                      | SQL Queries           |
+     |                      |---------------------->|
+     |                      |                       |
+     | JSON Response        |                       |
+     |<----------------------|                       |
+```
+
+### Authentication System
+
+The application uses **demo role-based authentication** via HTTP headers:
+
+- **Admin Role**: Full access to patient lifecycle, appointment deletion
+- **Doctor Role**: Patient read/search, appointment/visit management
+
+**Frontend Role Selection**: The UI provides role switcher to simulate different user types
+
+**Backend Authorization**: All API endpoints validate the `X-Demo-Role` header
+
+### Data Models & Relationships
+
+```
+Patients (1) -----> (N) Appointments (1) -----> (N) Visits
+    |                     |                        |
+    v                     v                        v
+Archive/Restore     Status Transitions        Clinical Notes
+```
+
+### Key Features in Action
+
+1. **Patient Management**
+   - Create patients with medical record numbers
+   - Search and filter patients
+   - Archive inactive patients
+
+2. **Appointment Workflow**
+   - Schedule appointments for patients
+   - Status tracking (scheduled, completed, cancelled, no_show)
+   - Link appointments to clinical visits
+
+3. **Visit Documentation**
+   - Create clinical encounters
+   - Record complaints and diagnoses
+   - Optional appointment linking
+
+4. **Audit Trail**
+   - Automatic logging of all sensitive operations
+   - Track who did what and when
+   - Essential for healthcare compliance
+
+### API Endpoints Summary
+
+| Method | Endpoint | Purpose | Required Role |
+|--------|----------|---------|---------------|
+| GET | `/health` | System health check | Any |
+| GET/POST | `/patients` | List/create patients | Admin/Doctor |
+| GET/PATCH/DELETE | `/patients/{id}` | Patient operations | Admin/Doctor |
+| GET/POST | `/appointments` | List/create appointments | Admin/Doctor |
+| GET/PATCH/DELETE | `/appointments/{id}` | Appointment operations | Admin (delete) |
+| GET/POST | `/visits` | List/create visits | Admin/Doctor |
+| GET | `/visits/{id}` | Visit details | Admin/Doctor |
+
+### Development Workflow
+
+1. **Start Backend**: `uvicorn app.main:app --reload --host 0.0.0.0 --port 8000`
+2. **Start Frontend**: `npm run dev`
+3. **Access Application**: `http://localhost:5173`
+4. **API Documentation**: `http://localhost:8000/api/v1/docs`
+
+### Production Considerations
+
+- Replace demo role auth with JWT/session-based authentication
+- Add database connection pooling
+- Implement distributed rate limiting
+- Add background job processing
+- Set up monitoring and observability
 
 ## Tests
 

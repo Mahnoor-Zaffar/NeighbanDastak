@@ -9,18 +9,21 @@ security-minded defaults, and a demo-ready frontend.
 - patient management (CRUD + archive)
 - appointment management (CRUD + status transitions)
 - visit/encounter management (linked to patient and optional appointment)
-- role-based permissions via demo roles (`admin`, `doctor`)
+- role-based permissions via demo roles (`admin`, `doctor`, `receptionist`)
 - audit logging for sensitive write actions
 - standardized API errors with request IDs
 - basic write-rate limiting
-- React demo UI for auth simulation + patient/appointment/visit flows
+- **prescriptions management** with medication items and printing
+- **queue management system** for clinic workflow optimization
+- **follow-up tracking** for patient care coordination
+- **analytics dashboard** with clinic metrics and insights
+- **patient timeline** for comprehensive history tracking
+- React demo UI for auth simulation + complete clinic workflows
 
 Intentionally deferred:
 
-- prescriptions
 - notifications
 - billing
-- analytics
 - attachments
 - patient self-service portals
 
@@ -40,9 +43,13 @@ Detailed module architecture:
 Base path: `/api/v1`
 
 - system: `/health`
-- patients: list/create/detail/update/archive
-- appointments: list/create/detail/update/delete
+- patients: list/create/detail/update/archive/timeline
+- appointments: list/create/detail/update/delete/queue management
 - visits: create/detail/update
+- prescriptions: create/detail/update/delete/print
+- queue: clinic queue management with status tracking
+- follow-ups: create/update/complete/cancel
+- analytics: clinic summary and insights
 
 Role behavior and response conventions:
 
@@ -200,6 +207,11 @@ Patients (1) -----> (N) Appointments (1) -----> (N) Visits
     |                     |                        |
     v                     v                        v
 Archive/Restore     Status Transitions        Clinical Notes
+    |                     |                        |
+    v                     v                        v
+Prescriptions     Queue System             Follow-ups
+Audit Logs         Doctor Workload        Patient Timeline
+Users             Analytics               Care Coordination
 ```
 
 ### Key Features in Action
@@ -208,18 +220,48 @@ Archive/Restore     Status Transitions        Clinical Notes
    - Create patients with medical record numbers
    - Search and filter patients
    - Archive inactive patients
+   - Comprehensive patient timeline
+   - Prescription and follow-up history
 
 2. **Appointment Workflow**
    - Schedule appointments for patients
    - Status tracking (scheduled, completed, cancelled, no_show)
    - Link appointments to clinical visits
+   - Queue management for clinic operations
+   - Doctor assignment and workload tracking
 
 3. **Visit Documentation**
    - Create clinical encounters
    - Record complaints and diagnoses
    - Optional appointment linking
+   - Prescription creation during visits
+   - Follow-up scheduling
 
-4. **Audit Trail**
+4. **Prescription Management**
+   - Create prescriptions with multiple medications
+   - Detailed dosage and frequency instructions
+   - Prescription printing for patients
+   - Link prescriptions to visits and patients
+
+5. **Queue System**
+   - Real-time clinic queue management
+   - Patient check-in/check-out workflow
+   - Queue status tracking (waiting, in_progress, completed)
+   - Doctor queue assignment
+
+6. **Follow-up Tracking**
+   - Schedule patient follow-ups
+   - Status management (pending, completed, cancelled, overdue)
+   - Care coordination reminders
+   - Link follow-ups to visits
+
+7. **Analytics Dashboard**
+   - Clinic summary statistics
+   - Appointment trends and patterns
+   - Doctor workload analysis
+   - Patient acquisition metrics
+
+8. **Audit Trail**
    - Automatic logging of all sensitive operations
    - Track who did what and when
    - Essential for healthcare compliance
@@ -231,10 +273,24 @@ Archive/Restore     Status Transitions        Clinical Notes
 | GET | `/health` | System health check | Any |
 | GET/POST | `/patients` | List/create patients | Admin/Doctor |
 | GET/PATCH/DELETE | `/patients/{id}` | Patient operations | Admin/Doctor |
+| GET | `/patients/{id}/timeline` | Patient timeline | Admin/Doctor |
 | GET/POST | `/appointments` | List/create appointments | Admin/Doctor |
 | GET/PATCH/DELETE | `/appointments/{id}` | Appointment operations | Admin (delete) |
+| POST | `/appointments/{id}/check-in` | Check-in patient | Admin/Doctor |
 | GET/POST | `/visits` | List/create visits | Admin/Doctor |
 | GET | `/visits/{id}` | Visit details | Admin/Doctor |
+| GET/POST | `/prescriptions` | List/create prescriptions | Admin/Doctor |
+| GET/PATCH/DELETE | `/prescriptions/{id}` | Prescription operations | Admin/Doctor |
+| GET | `/prescriptions/{id}/print` | Print prescription | Admin/Doctor |
+| GET | `/queue` | View clinic queue | Admin/Doctor |
+| POST | `/queue/{id}/call` | Call next patient | Admin/Doctor |
+| POST | `/queue/{id}/complete` | Complete queue entry | Admin/Doctor |
+| GET/POST | `/follow-ups` | List/create follow-ups | Admin/Doctor |
+| GET/PATCH | `/follow-ups/{id}` | Update follow-up | Admin/Doctor |
+| POST | `/follow-ups/{id}/complete` | Complete follow-up | Admin/Doctor |
+| GET | `/analytics/summary` | Clinic analytics | Admin/Doctor |
+| GET | `/analytics/appointments-by-day` | Appointment trends | Admin/Doctor |
+| GET | `/analytics/doctor-workload` | Doctor workload | Admin/Doctor |
 
 ### Development Workflow
 
@@ -308,15 +364,20 @@ Core production settings:
 
 This MVP uses role simulation, not user accounts.
 
-- `admin`: patient lifecycle + appointment delete
-- `doctor`: patient read/search + appointment/visit capture
+- `admin`: patient lifecycle + appointment delete + full analytics
+- `doctor`: patient read/search + appointment/visit/prescription management
+- `receptionist`: read-only intake simulation with queue management
 
-Use synthetic data only. Suggested demo baseline:
+Use synthetic data only. Current demo dataset:
 
-- 3 active patients
-- 1 archived patient
-- 2 upcoming appointments
-- 1 completed appointment linked to a visit
+- **34 active patients** with comprehensive demographics
+- **12 appointments** with various statuses
+- **7 completed visits** with clinical documentation
+- **15 prescriptions** across multiple patients
+- **8 follow-ups** for care coordination
+- **Queue system** with real-time status tracking
+
+This rich dataset demonstrates all major clinic workflows and analytics capabilities.
 
 ## Portfolio Presentation
 
@@ -335,15 +396,21 @@ Suggested screenshots and live demo script:
 - demo-role header auth only (no production auth/session model yet)
 - in-memory rate limiting (single instance)
 - no background workers
-- no file attachments or prescriptions module
-- no advanced analytics/dashboarding
+- no file attachments
+- no notifications system
+- no billing module
+- no patient self-service portal
 
 ## Future Roadmap
 
 1. replace demo-role auth with real authentication and user model
-2. prescriptions and medication workflow module
-3. notifications/reminders and async task processing
-4. stronger production controls (distributed rate limiting, observability, CI/CD)
+2. notifications and reminders system with async task processing
+3. file attachments for documents and medical images
+4. billing and insurance processing
+5. patient self-service portal
+6. stronger production controls (distributed rate limiting, observability, CI/CD)
+7. mobile-responsive design improvements
+8. advanced reporting and export capabilities
 
 ## Documentation Index
 

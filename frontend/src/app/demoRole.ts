@@ -1,9 +1,9 @@
-export type DemoRole = "admin" | "doctor";
+export type DemoRole = "admin" | "doctor" | "receptionist";
 
 const STORAGE_KEY = "nd-demo-role";
 
 export function isDemoRole(value: string | null): value is DemoRole {
-  return value === "admin" || value === "doctor";
+  return value === "admin" || value === "doctor" || value === "receptionist";
 }
 
 export function getStoredDemoRole(): DemoRole | null {

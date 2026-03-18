@@ -2,10 +2,12 @@ import { useEffect, useMemo, useState } from "react";
 import {
   Activity,
   CalendarPlus,
+  CalendarClock,
   ClipboardPlus,
   LayoutDashboard,
   LogOut,
   Menu,
+  Stethoscope,
   Search,
   Share2,
   UserPlus,
@@ -15,8 +17,9 @@ import {
 } from "lucide-react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 
-import { fetchHealth, type HealthResponse } from "../app/api";
+import { fetchHealth, listFollowUps, type HealthResponse } from "../app/api";
 import { clearStoredDemoRole, getStoredDemoRole, storeDemoRole, type DemoRole } from "../app/demoRole";
+import { getStoredDoctorProfileId } from "../app/doctorIdentity";
 import { StatCard } from "./dashboard/StatCard";
 import { HealthCard } from "./HealthCard";
 
@@ -39,6 +42,7 @@ const secondaryButtonClass =
 
 const primaryNav: NavItem[] = [
   { label: "Dashboard", to: "/appointments", icon: LayoutDashboard, end: true },
+  { label: "Queue", to: "/queue", icon: Stethoscope },
   { label: "Patients", to: "/patients", icon: Users },
   { label: "Visits", to: "/visits/new", icon: ClipboardPlus },
 ];
@@ -54,8 +58,19 @@ export function AppLayout() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [health, setHealth] = useState<HealthResponse | null>(null);
   const [healthError, setHealthError] = useState<string | null>(null);
+  const [followUpSummary, setFollowUpSummary] = useState<{
+    overdue: number;
+    dueSoon: number;
+    loading: boolean;
+    error: string | null;
+  }>({
+    overdue: 0,
+    dueSoon: 0,
+    loading: false,
+    error: null,
+  });
 
-  const roleLabel = role === "admin" ? "Admin" : "Doctor";
+  const roleLabel = role === "admin" ? "Admin" : role === "doctor" ? "Doctor" : "Receptionist";
   const pageMeta = useMemo(() => getPageMeta(location.pathname, roleLabel), [location.pathname, roleLabel]);
 
   useEffect(() => {
@@ -86,6 +101,81 @@ export function AppLayout() {
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (role === "receptionist") {
+      setFollowUpSummary({ overdue: 0, dueSoon: 0, loading: false, error: null });
+      return;
+    }
+
+    const actorUserId = role === "doctor" ? getStoredDoctorProfileId().trim() : undefined;
+    if (role === "doctor" && !actorUserId) {
+      setFollowUpSummary({
+        overdue: 0,
+        dueSoon: 0,
+        loading: false,
+        error: "Set your doctor profile ID to load follow-up metrics.",
+      });
+      return;
+    }
+
+    let active = true;
+
+    async function loadFollowUpSummary() {
+      setFollowUpSummary((current) => ({ ...current, loading: true, error: null }));
+      const dueSoonDate = new Date();
+      dueSoonDate.setDate(dueSoonDate.getDate() + 7);
+      try {
+        const [overdueResponse, dueSoonResponse] = await Promise.all([
+          listFollowUps(role, {
+            status: "overdue",
+            limit: 1,
+            offset: 0,
+            actorUserId,
+          }),
+          listFollowUps(role, {
+            status: "pending",
+            dueBefore: dueSoonDate.toISOString().slice(0, 10),
+            limit: 1,
+            offset: 0,
+            actorUserId,
+          }),
+        ]);
+
+        if (!active) {
+          return;
+        }
+
+        setFollowUpSummary({
+          overdue: overdueResponse.total,
+          dueSoon: dueSoonResponse.total,
+          loading: false,
+          error: null,
+        });
+      } catch (loadError) {
+        if (!active) {
+          return;
+        }
+
+        setFollowUpSummary({
+          overdue: 0,
+          dueSoon: 0,
+          loading: false,
+          error: loadError instanceof Error ? loadError.message : "Unable to load follow-up metrics",
+        });
+      }
+    }
+
+    void loadFollowUpSummary();
+    const intervalId = window.setInterval(() => {
+      void loadFollowUpSummary();
+    }, 60000);
+
+    return () => {
+      active = false;
+      window.clearInterval(intervalId);
+    };
+  }, [location.pathname, role]);
 
   useEffect(() => {
     setMobileNavOpen(false);
@@ -155,6 +245,7 @@ export function AppLayout() {
                 >
                   <option value="admin">Admin</option>
                   <option value="doctor">Doctor</option>
+                  <option value="receptionist">Receptionist</option>
                 </select>
               </label>
 
@@ -215,7 +306,7 @@ export function AppLayout() {
               </div>
             </header>
 
-            <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
               <StatCard
                 accentClassName="bg-indigo-50 text-indigo-600"
                 description="Currently under care"
@@ -236,6 +327,25 @@ export function AppLayout() {
                 icon={ClipboardPlus}
                 title="Visits Today"
                 value="7"
+              />
+              <StatCard
+                accentClassName="bg-amber-50 text-amber-700"
+                description={
+                  role === "receptionist"
+                    ? "Clinical follow-up metrics are visible to admin and doctors."
+                    : followUpSummary.error
+                      ? followUpSummary.error
+                      : `Overdue ${followUpSummary.overdue} · Due in 7 days ${followUpSummary.dueSoon}`
+                }
+                icon={CalendarClock}
+                title="Follow-up Alerts"
+                value={
+                  role === "receptionist"
+                    ? "N/A"
+                    : followUpSummary.loading
+                      ? "..."
+                      : String(followUpSummary.overdue)
+                }
               />
             </section>
 
@@ -285,6 +395,13 @@ function getPageMeta(pathname: string, roleLabel: string): { title: string; desc
     };
   }
 
+  if (pathname === "/queue") {
+    return {
+      title: "Smart Queue",
+      description: "Manage check-ins and patient flow for reception and doctor workflows.",
+    };
+  }
+
   if (pathname === "/patients") {
     return {
       title: "Patient Directory",
@@ -303,6 +420,20 @@ function getPageMeta(pathname: string, roleLabel: string): { title: string; desc
     return {
       title: "Create Visit",
       description: "Start a clinical visit from an appointment or direct intake.",
+    };
+  }
+
+  if (pathname.startsWith("/prescriptions/new")) {
+    return {
+      title: "Create Prescription",
+      description: "Compose medicine orders for a completed visit with clear dosing instructions.",
+    };
+  }
+
+  if (pathname.startsWith("/prescriptions/")) {
+    return {
+      title: "Prescription Detail",
+      description: "Review diagnosis context and prescribed medicines for this record.",
     };
   }
 

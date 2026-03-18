@@ -7,7 +7,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from sqlalchemy.orm import Session
 
-from app.api.deps.permissions import CurrentActor, require_roles
+from app.api.deps.permissions import CurrentActor, QueueActor, get_queue_actor, require_roles
 from app.core.rbac import Role
 from app.db.models.appointment import AppointmentStatus
 from app.db.session import get_db_session
@@ -17,6 +17,7 @@ from app.services.appointment_service import AppointmentService
 
 router = APIRouter(prefix="/appointments", tags=["appointments"])
 
+ReadActor = Annotated[QueueActor, Depends(get_queue_actor)]
 AllowedActor = Annotated[CurrentActor, Depends(require_roles(Role.ADMIN, Role.DOCTOR))]
 AdminActor = Annotated[CurrentActor, Depends(require_roles(Role.ADMIN))]
 
@@ -27,7 +28,7 @@ def get_appointment_service(session: Annotated[Session, Depends(get_db_session)]
 
 @router.get("", response_model=AppointmentListResponse)
 def list_appointments(
-    _: AllowedActor,
+    _: ReadActor,
     service: Annotated[AppointmentService, Depends(get_appointment_service)],
     patient_id: UUID | None = None,
     status_filter: Annotated[AppointmentStatus | None, Query(alias="status")] = None,
@@ -65,7 +66,7 @@ def create_appointment(
 
 @router.get("/{appointment_id}", response_model=AppointmentRead)
 def get_appointment(
-    _: AllowedActor,
+    _: ReadActor,
     appointment_id: UUID,
     service: Annotated[AppointmentService, Depends(get_appointment_service)],
 ) -> AppointmentRead:

@@ -2,15 +2,18 @@
 
 Phase 6 keeps the UI intentionally simple and demo-oriented. It focuses on
 clear flows for current backend modules only: auth simulation, patients,
-appointments, and visits.
+appointments, visits, and prescriptions.
 
 ## Implemented routes
 
-- `/auth` demo role selection (`admin` or `doctor`)
+- `/auth` demo role selection (`admin`, `doctor`, or `receptionist`)
 - `/appointments` appointment list, status update, and delete (admin only)
 - `/appointments/new` create appointment
 - `/visits/new` create visit (optionally linked to an appointment)
 - `/visits/:visitId` visit detail
+- `/prescriptions/new?patient_id=...&visit_id=...` create prescription from visit context
+- `/prescriptions/:prescriptionId` prescription detail + edit
+- `/print/prescriptions/:prescriptionId` A4 print/export layout (Print or Save as PDF)
 - `/patients` patient list + search + archive (admin only)
 - `/patients/new` create patient (admin only)
 - `/patients/:patientId` patient detail
@@ -22,7 +25,9 @@ appointments, and visits.
 2. Create or review patients.
 3. Create appointments for patients.
 4. Create visits directly or from an appointment.
-5. Switch role from the sidebar/mobile menu to validate permission boundaries.
+5. Create prescriptions from visit detail and review them from visit/patient pages.
+6. Open prescription detail and use Print / Save PDF.
+7. Switch role from the sidebar/mobile menu to validate permission boundaries.
 
 ## Local run
 
@@ -49,7 +54,7 @@ practical frontend confidence baseline for MVP scope.
 
 - No production authentication yet (demo role simulation only)
 - No reminders/notifications/calendar UX
-- No prescriptions, billing, analytics, attachments, or patient portal views
+- No server-side PDF generation pipeline yet (browser print/save-PDF workflow is implemented)
 
 ## Presentation note
 

@@ -10,17 +10,23 @@ from app.api.deps.permissions import CurrentActor, require_roles
 from app.core.rbac import Role
 from app.db.session import get_db_session
 from app.schemas.patient import PatientCreate, PatientListResponse, PatientRead, PatientUpdate
+from app.schemas.timeline import PatientTimelineResponse
 from app.services.audit_service import AuditContext
 from app.services.patient_service import PatientService
+from app.services.patient_timeline_service import PatientTimelineService
 
 router = APIRouter(prefix="/patients", tags=["patients"])
 
-ReadActor = Annotated[CurrentActor, Depends(require_roles(Role.ADMIN, Role.DOCTOR))]
+ReadActor = Annotated[CurrentActor, Depends(require_roles(Role.ADMIN, Role.DOCTOR, Role.RECEPTIONIST))]
 AdminActor = Annotated[CurrentActor, Depends(require_roles(Role.ADMIN))]
 
 
 def get_patient_service(session: Annotated[Session, Depends(get_db_session)]) -> PatientService:
     return PatientService(session)
+
+
+def get_patient_timeline_service(session: Annotated[Session, Depends(get_db_session)]) -> PatientTimelineService:
+    return PatientTimelineService(session)
 
 
 @router.get("", response_model=PatientListResponse)
@@ -55,6 +61,15 @@ def create_patient(
             ip_address=request.client.host if request.client else None,
         ),
     )
+
+
+@router.get("/{patient_id}/timeline", response_model=PatientTimelineResponse)
+def get_patient_timeline(
+    _: ReadActor,
+    patient_id: UUID,
+    service: Annotated[PatientTimelineService, Depends(get_patient_timeline_service)],
+) -> PatientTimelineResponse:
+    return service.get_timeline(patient_id)
 
 
 @router.get("/{patient_id}", response_model=PatientRead)

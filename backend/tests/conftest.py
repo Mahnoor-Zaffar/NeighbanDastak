@@ -8,6 +8,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
+from app.core.rbac import Role
+from app.db.models.user import User
 from app.core.config import get_settings
 from app.db import models  # noqa: F401
 from app.db.base import Base
@@ -77,6 +79,11 @@ def doctor_headers() -> dict[str, str]:
 @pytest.fixture
 def unsupported_role_headers() -> dict[str, str]:
     return {"X-Demo-Role": "guest"}
+
+
+@pytest.fixture
+def receptionist_headers() -> dict[str, str]:
+    return {"X-Demo-Role": "receptionist"}
 
 
 @pytest.fixture
@@ -181,6 +188,35 @@ def create_visit(
     ):
         payload = visit_payload_factory(patient_id, **overrides)
         return client.post("/api/v1/visits", json=payload, headers=headers or doctor_headers)
+
+    return _create
+
+
+@pytest.fixture
+def create_user(db_session: Session) -> Callable[..., User]:
+    def _create(
+        *,
+        email: str,
+        full_name: str,
+        role: Role,
+        password_hash: str = "test-password-hash",
+        is_active: bool = True,
+        specialty: str | None = None,
+        license_number: str | None = None,
+    ) -> User:
+        user = User(
+            email=email,
+            full_name=full_name,
+            role=role,
+            password_hash=password_hash,
+            is_active=is_active,
+            specialty=specialty,
+            license_number=license_number,
+        )
+        db_session.add(user)
+        db_session.commit()
+        db_session.refresh(user)
+        return user
 
     return _create
 

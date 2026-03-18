@@ -48,6 +48,14 @@ export function DemoAuthPage() {
             Admin
             <span>Full demo permissions including patient lifecycle</span>
           </button>
+          <button
+            className={selectedRole === "receptionist" ? "role-button active" : "role-button"}
+            type="button"
+            onClick={() => setSelectedRole("receptionist")}
+          >
+            Receptionist
+            <span>Read-only intake simulation with no clinical write controls</span>
+          </button>
         </div>
 
         <button className="primary-button auth-continue" type="button" onClick={handleContinue}>

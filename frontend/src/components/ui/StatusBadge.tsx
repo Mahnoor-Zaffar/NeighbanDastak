@@ -1,13 +1,30 @@
 interface StatusBadgeProps {
   label: string;
-  tone: "scheduled" | "completed" | "cancelled" | "no_show" | "healthy" | "failed" | "neutral";
+  tone:
+    | "pending"
+    | "scheduled"
+    | "completed"
+    | "cancelled"
+    | "overdue"
+    | "no_show"
+    | "waiting"
+    | "in_progress"
+    | "skipped"
+    | "healthy"
+    | "failed"
+    | "neutral";
 }
 
 const toneStyles: Record<StatusBadgeProps["tone"], string> = {
+  pending: "bg-amber-50 text-amber-700 ring-amber-600/20",
   scheduled: "bg-blue-50 text-blue-700 ring-blue-600/20",
   completed: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
   cancelled: "bg-rose-50 text-rose-700 ring-rose-600/20",
+  overdue: "bg-rose-50 text-rose-700 ring-rose-600/20",
   no_show: "bg-slate-100 text-slate-700 ring-slate-500/20",
+  waiting: "bg-amber-50 text-amber-700 ring-amber-600/20",
+  in_progress: "bg-sky-50 text-sky-700 ring-sky-600/20",
+  skipped: "bg-slate-100 text-slate-700 ring-slate-500/20",
   healthy: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
   failed: "bg-rose-50 text-rose-700 ring-rose-600/20",
   neutral: "bg-slate-100 text-slate-700 ring-slate-500/20",

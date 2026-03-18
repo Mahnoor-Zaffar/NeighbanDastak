@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from app.db.models.appointment import AppointmentStatus
+from app.db.models.appointment import AppointmentStatus, QueueStatus
 
 
 def _normalize_optional_string(value: str | None) -> str | None:
@@ -70,7 +70,14 @@ class AppointmentRead(BaseModel):
     id: UUID
     patient_id: UUID
     scheduled_for: datetime
+    scheduled_date: date
     status: AppointmentStatus
+    queue_number: int | None
+    queue_status: QueueStatus | None
+    checked_in_at: datetime | None
+    called_at: datetime | None
+    completed_at: datetime | None
+    assigned_doctor_id: UUID | None
     reason: str | None
     notes: str | None
     created_at: datetime

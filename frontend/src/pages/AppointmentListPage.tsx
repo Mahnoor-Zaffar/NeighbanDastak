@@ -13,6 +13,8 @@ import {
   type Patient,
 } from "../app/api";
 import type { AppLayoutContext } from "../components/AppLayout";
+import { AnalyticsDashboardSection } from "../components/analytics/AnalyticsDashboardSection";
+import { FollowUpDashboardSection } from "../components/followUps/FollowUpDashboardSection";
 import { StatusBadge } from "../components/ui/StatusBadge";
 
 const STATUS_OPTIONS: AppointmentStatus[] = ["scheduled", "completed", "cancelled", "no_show"];
@@ -135,6 +137,10 @@ export function AppointmentListPage() {
           </div>
         </div>
       </section>
+
+      <AnalyticsDashboardSection role={role} />
+
+      {role !== "receptionist" ? <FollowUpDashboardSection role={role} /> : null}
 
       <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">

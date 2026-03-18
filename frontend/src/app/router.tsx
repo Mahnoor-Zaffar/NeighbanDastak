@@ -8,6 +8,10 @@ import { DemoAuthPage } from "../pages/DemoAuthPage";
 import { PatientDetailPage } from "../pages/PatientDetailPage";
 import { PatientFormPage } from "../pages/PatientFormPage";
 import { PatientListPage } from "../pages/PatientListPage";
+import { PrescriptionCreatePage } from "../pages/PrescriptionCreatePage";
+import { PrescriptionDetailPage } from "../pages/PrescriptionDetailPage";
+import { PrescriptionPrintPage } from "../pages/PrescriptionPrintPage";
+import { QueuePage } from "../pages/QueuePage";
 import { VisitCreatePage } from "../pages/VisitCreatePage";
 import { VisitDetailPage } from "../pages/VisitDetailPage";
 
@@ -19,6 +23,10 @@ export const router = createBrowserRouter([
   {
     element: <AuthGate />,
     children: [
+      {
+        path: "/print/prescriptions/:prescriptionId",
+        element: <PrescriptionPrintPage />,
+      },
       {
         path: "/",
         element: <AppLayout />,
@@ -36,12 +44,24 @@ export const router = createBrowserRouter([
             element: <AppointmentCreatePage />,
           },
           {
+            path: "queue",
+            element: <QueuePage />,
+          },
+          {
             path: "visits/new",
             element: <VisitCreatePage />,
           },
           {
             path: "visits/:visitId",
             element: <VisitDetailPage />,
+          },
+          {
+            path: "prescriptions/new",
+            element: <PrescriptionCreatePage />,
+          },
+          {
+            path: "prescriptions/:prescriptionId",
+            element: <PrescriptionDetailPage />,
           },
           {
             path: "patients",

@@ -82,6 +82,7 @@ class AppointmentService:
         appointment = Appointment(
             patient_id=payload.patient_id,
             scheduled_for=payload.scheduled_for,
+            scheduled_date=payload.scheduled_for.date(),
             status=AppointmentStatus.SCHEDULED,
             reason=payload.reason,
             notes=payload.notes,
@@ -132,6 +133,8 @@ class AppointmentService:
 
         for field, value in updates.items():
             setattr(appointment, field, value)
+        if "scheduled_for" in updates:
+            appointment.scheduled_date = appointment.scheduled_for.date()
 
         if next_status is not None and next_status != current_status:
             self.audit.log_action(

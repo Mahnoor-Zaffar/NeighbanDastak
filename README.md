@@ -362,11 +362,13 @@ Core production settings:
 
 ## Demo Account and Data Strategy
 
-This MVP uses role simulation, not user accounts.
+This MVP uses demo auth role simulation with doctor-profile linking.
 
 - `admin`: patient lifecycle + appointment delete + full analytics
 - `doctor`: patient read/search + appointment/visit/prescription management
 - `receptionist`: read-only intake simulation with queue management
+
+Doctor flows are profile-scoped. The app now resolves and stores the logged-in doctor profile automatically during demo login (no manual doctor profile ID entry required).
 
 Use synthetic data only. Current demo dataset:
 

@@ -3,8 +3,6 @@ import { useMemo, useState, type FormEvent } from "react";
 import type { DemoRole } from "../../app/api";
 
 export interface FollowUpFormValues {
-  doctor_id: string;
-  doctor_name: string;
   due_date: string;
   reason: string;
   notes: string;
@@ -14,11 +12,12 @@ interface FollowUpFormProps {
   role: DemoRole;
   patientId: string;
   visitId: string;
+  doctorProfileId: string;
+  doctorDisplayName: string;
   initialValues?: Partial<FollowUpFormValues>;
   isSubmitting: boolean;
   submitError: string | null;
   onSubmit: (values: FollowUpFormValues) => Promise<void>;
-  onDoctorProfileChange?: (doctorId: string, doctorName: string) => void;
   onCancel?: () => void;
 }
 
@@ -26,15 +25,14 @@ export function FollowUpForm({
   role,
   patientId,
   visitId,
+  doctorProfileId,
+  doctorDisplayName,
   initialValues,
   isSubmitting,
   submitError,
   onSubmit,
-  onDoctorProfileChange,
   onCancel,
 }: FollowUpFormProps) {
-  const [doctorId, setDoctorId] = useState(initialValues?.doctor_id ?? "");
-  const [doctorName, setDoctorName] = useState(initialValues?.doctor_name ?? "");
   const [dueDate, setDueDate] = useState(initialValues?.due_date ?? "");
   const [reason, setReason] = useState(initialValues?.reason ?? "");
   const [notes, setNotes] = useState(initialValues?.notes ?? "");
@@ -47,8 +45,8 @@ export function FollowUpForm({
     event.preventDefault();
     setValidationError(null);
 
-    if (!doctorId.trim()) {
-      setValidationError("Doctor profile ID is required to create follow-up reminders.");
+    if (!doctorProfileId.trim()) {
+      setValidationError("Doctor profile is not linked to this session. Switch demo user and try again.");
       return;
     }
     if (!dueDate) {
@@ -61,8 +59,6 @@ export function FollowUpForm({
     }
 
     await onSubmit({
-      doctor_id: doctorId.trim(),
-      doctor_name: doctorName.trim(),
       due_date: dueDate,
       reason,
       notes,
@@ -75,39 +71,7 @@ export function FollowUpForm({
         <p className="font-medium text-slate-900">Create follow-up reminder</p>
         <p className="mt-1">Patient ID: {patientId}</p>
         <p>Visit ID: {visitId}</p>
-      </div>
-
-      <div className="grid gap-3 md:grid-cols-2">
-        <label className="field-stack">
-          <span className="field-label">Doctor profile ID</span>
-          <input
-            className="text-input"
-            value={doctorId}
-            onChange={(event) => {
-              const nextId = event.target.value;
-              setDoctorId(nextId);
-              onDoctorProfileChange?.(nextId, doctorName);
-            }}
-            placeholder="UUID from doctor account"
-            required
-            disabled={isReadOnlyRole}
-          />
-        </label>
-        <label className="field-stack">
-          <span className="field-label">Doctor display name</span>
-          <input
-            className="text-input"
-            value={doctorName}
-            onChange={(event) => {
-              const nextName = event.target.value;
-              setDoctorName(nextName);
-              onDoctorProfileChange?.(doctorId, nextName);
-            }}
-            placeholder="e.g. Dr. Ayesha Khan"
-            disabled={isReadOnlyRole}
-          />
-          <p className="muted-note">Saved locally for smoother clinical workflows.</p>
-        </label>
+        <p>Doctor: {doctorDisplayName || "Assigned doctor profile"}</p>
       </div>
 
       <div className="grid gap-3 md:grid-cols-2">

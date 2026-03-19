@@ -6,7 +6,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query, Request, status
 from sqlalchemy.orm import Session
 
-from app.api.deps.permissions import CurrentActor, require_roles
+from app.api.deps.permissions import CurrentActor, QueueActor, get_queue_actor, require_roles
 from app.core.rbac import Role
 from app.db.session import get_db_session
 from app.schemas.patient import PatientCreate, PatientListResponse, PatientRead, PatientUpdate
@@ -19,6 +19,7 @@ router = APIRouter(prefix="/patients", tags=["patients"])
 
 ReadActor = Annotated[CurrentActor, Depends(require_roles(Role.ADMIN, Role.DOCTOR, Role.RECEPTIONIST))]
 AdminActor = Annotated[CurrentActor, Depends(require_roles(Role.ADMIN))]
+TimelineActor = Annotated[QueueActor, Depends(get_queue_actor)]
 
 
 def get_patient_service(session: Annotated[Session, Depends(get_db_session)]) -> PatientService:
@@ -65,11 +66,11 @@ def create_patient(
 
 @router.get("/{patient_id}/timeline", response_model=PatientTimelineResponse)
 def get_patient_timeline(
-    _: ReadActor,
+    actor: TimelineActor,
     patient_id: UUID,
     service: Annotated[PatientTimelineService, Depends(get_patient_timeline_service)],
 ) -> PatientTimelineResponse:
-    return service.get_timeline(patient_id)
+    return service.get_timeline(patient_id, actor=actor)
 
 
 @router.get("/{patient_id}", response_model=PatientRead)

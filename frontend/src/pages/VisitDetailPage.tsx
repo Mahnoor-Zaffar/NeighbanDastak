@@ -10,7 +10,7 @@ import {
   type Prescription,
   type Visit,
 } from "../app/api";
-import { getStoredDoctorDisplayName, getStoredDoctorProfileId, rememberDoctorProfile } from "../app/doctorIdentity";
+import { getStoredDoctorDisplayName, getStoredDoctorProfileId } from "../app/doctorIdentity";
 import type { AppLayoutContext } from "../components/AppLayout";
 import { FollowUpForm, type FollowUpFormValues } from "../components/followUps/FollowUpForm";
 
@@ -30,10 +30,10 @@ export function VisitDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const canCreatePrescription = role === "doctor";
   const canCreateFollowUp = role === "doctor";
+  const doctorProfileId = getStoredDoctorProfileId().trim();
+  const doctorDisplayName = getStoredDoctorDisplayName().trim();
   const followUpInitialValues = useMemo(
     () => ({
-      doctor_id: getStoredDoctorProfileId(),
-      doctor_name: getStoredDoctorDisplayName(),
       due_date: new Date().toISOString().slice(0, 10),
     }),
     [],
@@ -121,19 +121,23 @@ export function VisitDetailPage() {
     setFollowUpSubmitError(null);
     setFollowUpSuccessMessage(null);
     try {
+      if (!doctorProfileId) {
+        setFollowUpSubmitError("Doctor profile is not linked to this session. Switch demo user and try again.");
+        return;
+      }
+
       await createFollowUp(
         role,
         {
           patient_id: visit.patient_id,
           visit_id: visit.id,
-          doctor_id: values.doctor_id,
+          doctor_id: doctorProfileId,
           due_date: values.due_date,
           reason: values.reason,
           notes: values.notes,
         },
-        values.doctor_id,
+        doctorProfileId,
       );
-      rememberDoctorProfile(values.doctor_id, values.doctor_name);
       setShowFollowUpForm(false);
       setFollowUpSuccessMessage(`Follow-up created for ${new Date(`${values.due_date}T00:00:00`).toLocaleDateString()}.`);
     } catch (submitError) {
@@ -249,10 +253,11 @@ export function VisitDetailPage() {
                   role={role}
                   patientId={visit.patient_id}
                   visitId={visit.id}
+                  doctorProfileId={doctorProfileId}
+                  doctorDisplayName={doctorDisplayName}
                   initialValues={followUpInitialValues}
                   isSubmitting={isSubmittingFollowUp}
                   submitError={followUpSubmitError}
-                  onDoctorProfileChange={rememberDoctorProfile}
                   onSubmit={handleCreateFollowUp}
                   onCancel={() => setShowFollowUpForm(false)}
                 />

@@ -17,9 +17,8 @@ import {
 } from "lucide-react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 
-import { fetchHealth, listFollowUps, type HealthResponse } from "../app/api";
-import { clearStoredDemoRole, getStoredDemoRole, storeDemoRole, type DemoRole } from "../app/demoRole";
-import { getStoredDoctorProfileId } from "../app/doctorIdentity";
+import { fetchHealth, listFollowUps, loginDemoUser, type HealthResponse } from "../app/api";
+import { clearStoredDemoRole, getStoredDemoRole, storeDemoSession, type DemoRole } from "../app/demoRole";
 import { StatCard } from "./dashboard/StatCard";
 import { HealthCard } from "./HealthCard";
 
@@ -58,6 +57,7 @@ export function AppLayout() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [health, setHealth] = useState<HealthResponse | null>(null);
   const [healthError, setHealthError] = useState<string | null>(null);
+  const [roleChangeError, setRoleChangeError] = useState<string | null>(null);
   const [followUpSummary, setFollowUpSummary] = useState<{
     overdue: number;
     dueSoon: number;
@@ -108,17 +108,6 @@ export function AppLayout() {
       return;
     }
 
-    const actorUserId = role === "doctor" ? getStoredDoctorProfileId().trim() : undefined;
-    if (role === "doctor" && !actorUserId) {
-      setFollowUpSummary({
-        overdue: 0,
-        dueSoon: 0,
-        loading: false,
-        error: "Set your doctor profile ID to load follow-up metrics.",
-      });
-      return;
-    }
-
     let active = true;
 
     async function loadFollowUpSummary() {
@@ -131,14 +120,12 @@ export function AppLayout() {
             status: "overdue",
             limit: 1,
             offset: 0,
-            actorUserId,
           }),
           listFollowUps(role, {
             status: "pending",
             dueBefore: dueSoonDate.toISOString().slice(0, 10),
             limit: 1,
             offset: 0,
-            actorUserId,
           }),
         ]);
 
@@ -182,8 +169,22 @@ export function AppLayout() {
   }, [location.pathname]);
 
   function handleRoleChange(nextRole: DemoRole) {
-    storeDemoRole(nextRole);
-    setRole(nextRole);
+    setRoleChangeError(null);
+    void (async () => {
+      try {
+        const currentUser = await loginDemoUser({ role: nextRole });
+        storeDemoSession({
+          role: currentUser.role,
+          userId: currentUser.user_id,
+          doctorProfileId: currentUser.doctor_profile_id,
+          fullName: currentUser.full_name,
+          email: currentUser.email,
+        });
+        setRole(nextRole);
+      } catch (error) {
+        setRoleChangeError(error instanceof Error ? error.message : "Unable to switch demo role");
+      }
+    })();
   }
 
   function handleSignOut() {
@@ -248,6 +249,7 @@ export function AppLayout() {
                   <option value="receptionist">Receptionist</option>
                 </select>
               </label>
+              {roleChangeError ? <p className="status-error">{roleChangeError}</p> : null}
 
               <button className={secondaryButtonClass} onClick={handleSignOut} type="button">
                 <LogOut className="h-4 w-4" />

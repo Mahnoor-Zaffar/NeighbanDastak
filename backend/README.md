@@ -16,6 +16,7 @@ This package currently contains the foundation plus patient and scheduling phase
 - visit/encounter model linked to patients and optional appointments
 - appointment and visit repositories/services/routes
 - role-based permissions via demo-role headers (`admin` and `doctor`)
+- demo auth bootstrap endpoints for doctor-profile-aware sessions
 - audit log persistence for sensitive actions
 - standardized API error payloads with request IDs
 - basic in-memory write-rate limiting

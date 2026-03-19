@@ -37,6 +37,7 @@ def create_follow_up(
             actor_role=actor.role,
             request_id=getattr(request.state, "request_id", None),
             ip_address=request.client.host if request.client else None,
+            actor_id=actor.user_id,
         ),
     )
 
@@ -96,6 +97,7 @@ def update_follow_up(
             actor_role=actor.role,
             request_id=getattr(request.state, "request_id", None),
             ip_address=request.client.host if request.client else None,
+            actor_id=actor.user_id,
         ),
     )
 
@@ -114,6 +116,7 @@ def complete_follow_up(
             actor_role=actor.role,
             request_id=getattr(request.state, "request_id", None),
             ip_address=request.client.host if request.client else None,
+            actor_id=actor.user_id,
         ),
     )
 
@@ -132,5 +135,6 @@ def cancel_follow_up(
             actor_role=actor.role,
             request_id=getattr(request.state, "request_id", None),
             ip_address=request.client.host if request.client else None,
+            actor_id=actor.user_id,
         ),
     )

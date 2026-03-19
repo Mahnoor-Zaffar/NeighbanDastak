@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import csv
+import io
 from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, Request, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.api.deps.permissions import CurrentActor, QueueActor, get_queue_actor, require_roles
@@ -98,6 +101,47 @@ def update_patient(
             request_id=getattr(request.state, "request_id", None),
             ip_address=request.client.host if request.client else None,
         ),
+    )
+
+
+@router.get("/export", response_class=StreamingResponse)
+def export_patients_csv(
+    _: ReadActor,
+    service: Annotated[PatientService, Depends(get_patient_service)],
+    q: Annotated[str | None, Query(min_length=1, max_length=100)] = None,
+    include_archived: bool = False,
+) -> StreamingResponse:
+    """Export patient list as CSV. Fetches up to 5000 rows."""
+    response_data = service.list_patients(
+        search=q,
+        include_archived=include_archived,
+        limit=5000,
+        offset=0,
+    )
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(
+        ["record_number", "first_name", "last_name", "date_of_birth", "email", "phone", "city", "archived_at", "created_at"]
+    )
+    for patient in response_data.items:
+        writer.writerow(
+            [
+                patient.record_number,
+                patient.first_name,
+                patient.last_name,
+                patient.date_of_birth,
+                patient.email or "",
+                patient.phone or "",
+                patient.city or "",
+                patient.archived_at.isoformat() if patient.archived_at else "",
+                patient.created_at.isoformat(),
+            ]
+        )
+    output.seek(0)
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=patients.csv"},
     )
 
 

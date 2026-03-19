@@ -42,6 +42,7 @@ class AppointmentService:
         self,
         *,
         patient_id: UUID | None,
+        doctor_id: UUID | None,
         status: AppointmentStatus | None,
         starts_at: datetime | None,
         ends_at: datetime | None,
@@ -50,6 +51,7 @@ class AppointmentService:
     ) -> AppointmentListResponse:
         items, total = self.appointments.list(
             patient_id=patient_id,
+            doctor_id=doctor_id,
             status=status,
             starts_at=starts_at,
             ends_at=ends_at,

@@ -27,6 +27,7 @@ class AppointmentRepository:
         self,
         *,
         patient_id: UUID | None,
+        doctor_id: UUID | None,
         status: AppointmentStatus | None,
         starts_at: datetime | None,
         ends_at: datetime | None,
@@ -39,6 +40,8 @@ class AppointmentRepository:
 
         if patient_id is not None:
             filters.append(Appointment.patient_id == patient_id)
+        if doctor_id is not None:
+            filters.append(Appointment.assigned_doctor_id == doctor_id)
         if status is not None:
             filters.append(Appointment.status == status)
         if starts_at is not None:

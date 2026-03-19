@@ -10,7 +10,7 @@ from app.db.models.visit import Visit
 from app.repositories.appointment_repository import AppointmentRepository
 from app.repositories.patient_repository import PatientRepository
 from app.repositories.visit_repository import VisitRepository
-from app.schemas.visit import VisitCreate, VisitRead, VisitUpdate
+from app.schemas.visit import VisitCreate, VisitListResponse, VisitRead, VisitUpdate
 from app.services.audit_service import AuditContext, AuditService
 
 
@@ -20,6 +20,20 @@ class VisitService:
         self.patients = PatientRepository(session)
         self.appointments = AppointmentRepository(session)
         self.audit = AuditService(session)
+
+    def list_visits(
+        self,
+        *,
+        patient_id: UUID | None,
+        limit: int,
+        offset: int,
+    ) -> VisitListResponse:
+        items, total = self.visits.list(
+            patient_id=patient_id,
+            limit=limit,
+            offset=offset,
+        )
+        return VisitListResponse(items=[VisitRead.model_validate(item) for item in items], total=total)
 
     def create_visit(self, payload: VisitCreate, *, context: AuditContext) -> VisitRead:
         patient = self.patients.get_by_id(payload.patient_id)

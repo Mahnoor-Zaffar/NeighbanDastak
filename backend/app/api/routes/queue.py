@@ -38,6 +38,7 @@ def check_in_appointment(
             actor_role=actor.role,
             request_id=getattr(request.state, "request_id", None),
             ip_address=request.client.host if request.client else None,
+            actor_id=actor.user_id,
         ),
     )
 
@@ -87,6 +88,7 @@ def call_queue_entry(
             actor_role=actor.role,
             request_id=getattr(request.state, "request_id", None),
             ip_address=request.client.host if request.client else None,
+            actor_id=actor.user_id,
         ),
     )
 
@@ -105,6 +107,7 @@ def complete_queue_entry(
             actor_role=actor.role,
             request_id=getattr(request.state, "request_id", None),
             ip_address=request.client.host if request.client else None,
+            actor_id=actor.user_id,
         ),
     )
 
@@ -123,5 +126,6 @@ def skip_queue_entry(
             actor_role=actor.role,
             request_id=getattr(request.state, "request_id", None),
             ip_address=request.client.host if request.client else None,
+            actor_id=actor.user_id,
         ),
     )

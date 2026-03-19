@@ -17,6 +17,7 @@ class AuditContext:
     actor_role: str
     request_id: str | None
     ip_address: str | None
+    actor_id: UUID | None = None
 
 
 class AuditService:
@@ -33,6 +34,7 @@ class AuditService:
         metadata: dict[str, Any] | None = None,
     ) -> None:
         log = AuditLog(
+            actor_id=context.actor_id,
             actor_role=context.actor_role,
             action=action,
             resource_type=resource_type,

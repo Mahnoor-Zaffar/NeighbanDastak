@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.rbac import Role
@@ -46,3 +46,34 @@ class UserRepository:
             .order_by(User.full_name.asc(), User.email.asc())
         )
         return list(self.session.scalars(statement))
+
+    def list(
+        self,
+        *,
+        role: Role | None,
+        is_active: bool | None,
+        limit: int,
+        offset: int,
+    ) -> tuple[list[User], int]:
+        statement = select(User)
+        count_statement = select(func.count()).select_from(User)
+        filters = []
+
+        if role is not None:
+            filters.append(User.role == role)
+        if is_active is not None:
+            filters.append(User.is_active.is_(is_active))
+
+        if filters:
+            from sqlalchemy import and_
+            where_clause = and_(*filters)
+            statement = statement.where(where_clause)
+            count_statement = count_statement.where(where_clause)
+
+        statement = statement.order_by(User.full_name.asc(), User.email.asc()).offset(offset).limit(limit)
+        items = list(self.session.scalars(statement))
+        total = self.session.scalar(count_statement) or 0
+        return items, total
+
+    def commit(self) -> None:
+        self.session.commit()

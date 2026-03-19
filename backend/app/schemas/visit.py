@@ -72,6 +72,11 @@ class VisitRead(BaseModel):
     updated_at: datetime
 
 
+class VisitListResponse(BaseModel):
+    items: list[VisitRead]
+    total: int
+
+
 class VisitUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

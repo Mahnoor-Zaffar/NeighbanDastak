@@ -20,6 +20,7 @@ class AuditLog(Base):
         nullable=False,
         index=True,
     )
+    actor_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True), nullable=True, index=True)
     actor_role: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
     action: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     resource_type: Mapped[str] = mapped_column(String(64), nullable=False, index=True)

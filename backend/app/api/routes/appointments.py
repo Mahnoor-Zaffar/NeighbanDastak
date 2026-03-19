@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import csv
+import io
 from datetime import datetime
 from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.api.deps.permissions import CurrentActor, QueueActor, get_queue_actor, require_roles
@@ -28,17 +31,20 @@ def get_appointment_service(session: Annotated[Session, Depends(get_db_session)]
 
 @router.get("", response_model=AppointmentListResponse)
 def list_appointments(
-    _: ReadActor,
+    actor: ReadActor,
     service: Annotated[AppointmentService, Depends(get_appointment_service)],
     patient_id: UUID | None = None,
+    doctor_id: UUID | None = None,
     status_filter: Annotated[AppointmentStatus | None, Query(alias="status")] = None,
     starts_at: datetime | None = None,
     ends_at: datetime | None = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 25,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> AppointmentListResponse:
+    # Doctors can optionally scope their own view, but may also see all appointments
     return service.list_appointments(
         patient_id=patient_id,
+        doctor_id=doctor_id,
         status=status_filter,
         starts_at=starts_at,
         ends_at=ends_at,
@@ -95,6 +101,52 @@ def update_appointment(
             request_id=getattr(request.state, "request_id", None),
             ip_address=request.client.host if request.client else None,
         ),
+    )
+
+
+@router.get("/export", response_class=StreamingResponse)
+def export_appointments_csv(
+    _: AllowedActor,
+    service: Annotated[AppointmentService, Depends(get_appointment_service)],
+    patient_id: UUID | None = None,
+    doctor_id: UUID | None = None,
+    status_filter: Annotated[AppointmentStatus | None, Query(alias="status")] = None,
+    starts_at: datetime | None = None,
+    ends_at: datetime | None = None,
+) -> StreamingResponse:
+    """Export appointment list as CSV. Fetches up to 5000 rows."""
+    response_data = service.list_appointments(
+        patient_id=patient_id,
+        doctor_id=doctor_id,
+        status=status_filter,
+        starts_at=starts_at,
+        ends_at=ends_at,
+        limit=5000,
+        offset=0,
+    )
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(
+        ["id", "patient_id", "scheduled_for", "scheduled_date", "status", "assigned_doctor_id", "reason", "created_at"]
+    )
+    for appt in response_data.items:
+        writer.writerow(
+            [
+                appt.id,
+                appt.patient_id,
+                appt.scheduled_for.isoformat(),
+                appt.scheduled_date,
+                appt.status,
+                appt.assigned_doctor_id or "",
+                appt.reason or "",
+                appt.created_at.isoformat(),
+            ]
+        )
+    output.seek(0)
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=appointments.csv"},
     )
 
 

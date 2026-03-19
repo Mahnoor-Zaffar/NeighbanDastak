@@ -5,6 +5,7 @@ from uuid import UUID
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.api.deps.permissions import QueueActor
 from app.db.models.appointment import Appointment, AppointmentStatus
 from app.db.models.audit_log import AuditLog
 from app.db.models.prescription import Prescription
@@ -29,10 +30,11 @@ class PatientTimelineService:
     def __init__(self, session: Session):
         self.repository = TimelineRepository(session)
 
-    def get_timeline(self, patient_id: UUID) -> PatientTimelineResponse:
+    def get_timeline(self, patient_id: UUID, *, actor: QueueActor) -> PatientTimelineResponse:
         patient = self.repository.get_patient(patient_id)
         if patient is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patient not found")
+        self._authorize_timeline_access(actor=actor, patient_id=patient_id)
 
         events: list[PatientTimelineEvent] = []
         patient_created_log = self.repository.get_patient_created_log(patient_id)
@@ -203,3 +205,29 @@ class PatientTimelineService:
         if not actor_role:
             return None
         return actor_role.replace("_", " ").title()
+
+    def _authorize_timeline_access(self, *, actor: QueueActor, patient_id: UUID) -> None:
+        if actor.role in {"admin", "receptionist"}:
+            return
+
+        if actor.role != "doctor":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You do not have permission to perform this action",
+            )
+
+        if actor.user_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Doctor identity is required",
+            )
+
+        doctor = self.repository.get_active_doctor(actor.user_id)
+        if doctor is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Doctor not found")
+
+        if not self.repository.doctor_has_patient_access(doctor_id=actor.user_id, patient_id=patient_id):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Doctors can only view timelines for their assigned patients",
+            )

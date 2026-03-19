@@ -5,6 +5,7 @@ from uuid import UUID
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.core.rbac import Role
 from app.db.models.appointment import Appointment
 from app.db.models.audit_log import AuditLog
 from app.db.models.patient import Patient
@@ -68,6 +69,25 @@ class TimelineRepository:
         statement = select(User).where(User.id.in_(user_ids))
         users = list(self.session.scalars(statement))
         return {user.id: user for user in users}
+
+    def get_active_doctor(self, doctor_id: UUID) -> User | None:
+        statement = select(User).where(
+            User.id == doctor_id,
+            User.role == Role.DOCTOR,
+            User.is_active.is_(True),
+        )
+        return self.session.scalar(statement)
+
+    def doctor_has_patient_access(self, *, doctor_id: UUID, patient_id: UUID) -> bool:
+        statement = (
+            select(Appointment.id)
+            .where(
+                Appointment.patient_id == patient_id,
+                Appointment.assigned_doctor_id == doctor_id,
+            )
+            .limit(1)
+        )
+        return self.session.scalar(statement) is not None
 
     def get_prescription_item_counts(self, prescription_ids: list[UUID]) -> dict[UUID, int]:
         if not prescription_ids:

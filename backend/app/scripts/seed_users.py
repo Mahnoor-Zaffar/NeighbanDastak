@@ -91,6 +91,7 @@ def seed_users(*, admin_password: str, doctor_password: str, reset_passwords: bo
     created = 0
     updated = 0
     passwords_rotated = 0
+    active_doctors: list[User] = []
 
     with SessionLocal() as session:
         admin_created, admin_pw_changed = upsert_user(
@@ -127,11 +128,24 @@ def seed_users(*, admin_password: str, doctor_password: str, reset_passwords: bo
                 passwords_rotated += 1
 
         session.commit()
+        active_doctors = list(
+            session.scalars(
+                select(User)
+                .where(
+                    User.role == Role.DOCTOR,
+                    User.is_active.is_(True),
+                )
+                .order_by(User.full_name.asc(), User.email.asc())
+            )
+        )
 
     print("Seed complete.")
     print(f"Created users: {created}")
     print(f"Updated users: {updated}")
     print(f"Passwords set/rotated: {passwords_rotated}")
+    print("Active doctor profiles:")
+    for doctor in active_doctors:
+        print(f"- {doctor.full_name} | {doctor.email} | profile_id={doctor.id}")
 
 
 def parse_args() -> argparse.Namespace:

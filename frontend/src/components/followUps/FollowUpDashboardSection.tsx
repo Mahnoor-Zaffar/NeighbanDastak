@@ -9,7 +9,6 @@ import {
   type FollowUp,
   type FollowUpStatus,
 } from "../../app/api";
-import { getStoredDoctorProfileId } from "../../app/doctorIdentity";
 import { StatusBadge } from "../ui/StatusBadge";
 
 type FollowUpWindowFilter = "all" | "due_today" | "overdue" | "upcoming";
@@ -42,7 +41,6 @@ const SORT_OPTIONS: Array<{ value: FollowUpSort; label: string }> = [
 ];
 
 export function FollowUpDashboardSection({ role }: FollowUpDashboardSectionProps) {
-  const doctorProfileId = getStoredDoctorProfileId().trim();
   const [items, setItems] = useState<FollowUp[]>([]);
   const [windowFilter, setWindowFilter] = useState<FollowUpWindowFilter>("all");
   const [statusFilter, setStatusFilter] = useState<"all" | FollowUpStatus>("all");
@@ -55,8 +53,6 @@ export function FollowUpDashboardSection({ role }: FollowUpDashboardSectionProps
   const [reloadToken, setReloadToken] = useState(0);
 
   const canManage = role === "doctor" || role === "admin";
-  const requiresDoctorIdentity = role === "doctor" && !doctorProfileId;
-  const actorUserId = role === "doctor" ? doctorProfileId : undefined;
   const todayIso = toDateOnly(new Date());
 
   useEffect(() => {
@@ -64,13 +60,6 @@ export function FollowUpDashboardSection({ role }: FollowUpDashboardSectionProps
       setItems([]);
       setLoading(false);
       setError(null);
-      return;
-    }
-
-    if (requiresDoctorIdentity) {
-      setItems([]);
-      setLoading(false);
-      setError("Set your doctor profile ID to load follow-up reminders.");
       return;
     }
 
@@ -85,7 +74,6 @@ export function FollowUpDashboardSection({ role }: FollowUpDashboardSectionProps
       setActionError(null);
       try {
         const response = await listFollowUps(role, {
-          actorUserId,
           limit: 100,
           offset: 0,
         });
@@ -112,7 +100,7 @@ export function FollowUpDashboardSection({ role }: FollowUpDashboardSectionProps
     return () => {
       active = false;
     };
-  }, [actorUserId, canManage, reloadToken, requiresDoctorIdentity, role]);
+  }, [canManage, reloadToken, role]);
 
   const dueTodayItems = useMemo(
     () =>
@@ -171,9 +159,9 @@ export function FollowUpDashboardSection({ role }: FollowUpDashboardSectionProps
     setBusyId(followUp.id);
     try {
       if (action === "complete") {
-        await completeFollowUp(role, followUp.id, actorUserId);
+        await completeFollowUp(role, followUp.id);
       } else {
-        await cancelFollowUp(role, followUp.id, actorUserId);
+        await cancelFollowUp(role, followUp.id);
       }
       setReloadToken((current) => current + 1);
     } catch (transitionError) {

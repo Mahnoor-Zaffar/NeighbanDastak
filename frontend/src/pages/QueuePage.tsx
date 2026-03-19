@@ -24,8 +24,6 @@ import {
 import {
   getStoredDoctorDisplayName,
   getStoredDoctorProfileId,
-  storeDoctorDisplayName,
-  storeDoctorProfileId,
 } from "../app/doctorIdentity";
 import type { AppLayoutContext } from "../components/AppLayout";
 import { StatusBadge } from "../components/ui/StatusBadge";
@@ -42,10 +40,8 @@ export function QueuePage() {
   const { role } = useOutletContext<AppLayoutContext>();
   const isDoctor = role === "doctor";
   const isAdmin = role === "admin";
-  const [doctorProfileId, setDoctorProfileId] = useState(() => getStoredDoctorProfileId());
-  const [doctorDisplayName, setDoctorDisplayName] = useState(() => getStoredDoctorDisplayName());
-  const [draftDoctorId, setDraftDoctorId] = useState(() => getStoredDoctorProfileId());
-  const [draftDoctorName, setDraftDoctorName] = useState(() => getStoredDoctorDisplayName());
+  const doctorProfileId = getStoredDoctorProfileId().trim();
+  const doctorDisplayName = getStoredDoctorDisplayName().trim();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [queueEntries, setQueueEntries] = useState<QueueEntry[]>([]);
   const [reloadToken, setReloadToken] = useState(0);
@@ -88,7 +84,7 @@ export function QueuePage() {
             }
             setQueueEntries([]);
             setAppointments([]);
-            setError("Set your doctor profile ID to load your assigned queue.");
+            setError("Doctor profile is not linked to this session. Switch demo user and try again.");
             return;
           }
 
@@ -261,25 +257,6 @@ export function QueuePage() {
     await handleQueueAction(nextPatient.appointment_id, "call");
   }
 
-  function handleSaveDoctorProfile() {
-    const nextDoctorId = draftDoctorId.trim();
-    if (!nextDoctorId) {
-      setError("Doctor profile ID is required.");
-      return;
-    }
-    if (!isValidUuid(nextDoctorId)) {
-      setError("Doctor profile ID must be a valid UUID.");
-      return;
-    }
-
-    storeDoctorProfileId(nextDoctorId);
-    storeDoctorDisplayName(draftDoctorName);
-    setDoctorProfileId(nextDoctorId);
-    setDoctorDisplayName(draftDoctorName.trim());
-    setError(null);
-    setReloadToken((current) => current + 1);
-  }
-
   return (
     <div className="space-y-6">
       <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -312,29 +289,7 @@ export function QueuePage() {
 
       {isDoctor ? (
         <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] md:items-end">
-            <label className="space-y-2">
-              <span className="text-xs font-medium uppercase tracking-wide text-slate-500">Doctor profile ID</span>
-              <input
-                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-100"
-                value={draftDoctorId}
-                onChange={(event) => setDraftDoctorId(event.target.value)}
-                placeholder="UUID from doctor account"
-              />
-            </label>
-            <label className="space-y-2">
-              <span className="text-xs font-medium uppercase tracking-wide text-slate-500">Display name</span>
-              <input
-                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-100"
-                value={draftDoctorName}
-                onChange={(event) => setDraftDoctorName(event.target.value)}
-                placeholder="e.g. Dr. Sana"
-              />
-            </label>
-            <button className={primaryButtonClass} type="button" onClick={handleSaveDoctorProfile}>
-              Save profile
-            </button>
-          </div>
+          <p className="text-sm text-slate-500">Doctor profile is linked automatically from your demo login session.</p>
           {doctorDisplayName ? <p className="mt-2 text-sm text-slate-500">Signed in as {doctorDisplayName}</p> : null}
         </section>
       ) : null}

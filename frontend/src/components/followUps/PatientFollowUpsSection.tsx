@@ -9,7 +9,6 @@ import {
   type FollowUp,
   type FollowUpStatus,
 } from "../../app/api";
-import { getStoredDoctorProfileId } from "../../app/doctorIdentity";
 import { StatusBadge } from "../ui/StatusBadge";
 
 interface PatientFollowUpsSectionProps {
@@ -34,20 +33,12 @@ export function PatientFollowUpsSection({ role, patientId }: PatientFollowUpsSec
   const [reloadToken, setReloadToken] = useState(0);
 
   const canManage = role === "doctor" || role === "admin";
-  const doctorProfileId = getStoredDoctorProfileId().trim();
   const todayIso = toDateOnly(new Date());
 
   useEffect(() => {
     if (!canManage) {
       setFollowUps([]);
       setError(null);
-      setIsLoading(false);
-      return;
-    }
-
-    if (role === "doctor" && !doctorProfileId) {
-      setFollowUps([]);
-      setError("Set your doctor profile ID to load and manage follow-up reminders.");
       setIsLoading(false);
       return;
     }
@@ -62,7 +53,6 @@ export function PatientFollowUpsSection({ role, patientId }: PatientFollowUpsSec
           dueBefore: dueBeforeFilter || undefined,
           limit: 100,
           offset: 0,
-          actorUserId: role === "doctor" ? doctorProfileId : undefined,
         });
         if (!active) {
           return;
@@ -86,7 +76,7 @@ export function PatientFollowUpsSection({ role, patientId }: PatientFollowUpsSec
     return () => {
       active = false;
     };
-  }, [canManage, doctorProfileId, dueBeforeFilter, patientId, reloadToken, role, statusFilter]);
+  }, [canManage, dueBeforeFilter, patientId, reloadToken, role, statusFilter]);
 
   const filteredFollowUps = useMemo(() => {
     let next = [...followUps];
@@ -126,9 +116,9 @@ export function PatientFollowUpsSection({ role, patientId }: PatientFollowUpsSec
     setBusyFollowUpId(followUpId);
     try {
       if (action === "complete") {
-        await completeFollowUp(role, followUpId, role === "doctor" ? doctorProfileId : undefined);
+        await completeFollowUp(role, followUpId);
       } else {
-        await cancelFollowUp(role, followUpId, role === "doctor" ? doctorProfileId : undefined);
+        await cancelFollowUp(role, followUpId);
       }
       setReloadToken((current) => current + 1);
     } catch (actionFailure) {

@@ -1,3 +1,5 @@
+import { getStoredDemoSession } from "./demoRole";
+
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000/api/v1";
 const DEMO_ROLE_HEADER = "X-Demo-Role";
 const DEMO_USER_ID_HEADER = "X-Demo-User-Id";
@@ -221,6 +223,26 @@ export interface FollowUpUpdatePayload {
   notes?: string;
 }
 
+export interface DemoDoctorProfile {
+  id: string;
+  full_name: string;
+  email: string;
+  specialty: string | null;
+}
+
+export interface DemoDoctorProfileListResponse {
+  items: DemoDoctorProfile[];
+  total: number;
+}
+
+export interface DemoCurrentUserResponse {
+  role: DemoRole;
+  user_id: string | null;
+  doctor_profile_id: string | null;
+  full_name: string | null;
+  email: string | null;
+}
+
 export interface AnalyticsSummaryResponse {
   reference_date: string;
   scope: "clinic" | "doctor" | string;
@@ -297,6 +319,52 @@ export async function fetchHealth(): Promise<HealthResponse> {
   return response.json() as Promise<HealthResponse>;
 }
 
+export async function listDemoDoctorProfiles(): Promise<DemoDoctorProfileListResponse> {
+  const response = await fetch(`${API_BASE_URL}/auth/demo/doctors`, {
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.json().catch(() => null);
+    const errorMessage =
+      errorBody?.error?.message ??
+      (typeof errorBody?.detail === "string" ? errorBody.detail : undefined);
+    throw new Error(errorMessage ?? `Request failed with status ${response.status}`);
+  }
+
+  return response.json() as Promise<DemoDoctorProfileListResponse>;
+}
+
+export async function loginDemoUser(payload: {
+  role: DemoRole;
+  doctor_profile_id?: string;
+}): Promise<DemoCurrentUserResponse> {
+  const response = await fetch(`${API_BASE_URL}/auth/demo/login`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.json().catch(() => null);
+    const errorMessage =
+      errorBody?.error?.message ??
+      (typeof errorBody?.detail === "string" ? errorBody.detail : undefined);
+    throw new Error(errorMessage ?? `Request failed with status ${response.status}`);
+  }
+
+  return response.json() as Promise<DemoCurrentUserResponse>;
+}
+
+export function getDemoCurrentUser(role: DemoRole, actorUserId?: string): Promise<DemoCurrentUserResponse> {
+  const headers = actorUserId ? { [DEMO_USER_ID_HEADER]: actorUserId } : undefined;
+  return requestWithHeaders<DemoCurrentUserResponse>("/auth/demo/current-user", role, headers);
+}
+
 async function request<T>(path: string, role: DemoRole, init?: RequestInit): Promise<T> {
   return requestWithHeaders<T>(path, role, undefined, init);
 }
@@ -307,10 +375,12 @@ async function requestWithHeaders<T>(
   extraHeaders?: Record<string, string>,
   init?: RequestInit,
 ): Promise<T> {
+  const actorUserId = resolveActorUserId(role, extraHeaders);
   const response = await fetch(`${API_BASE_URL}${path}`, {
     headers: {
       "Content-Type": "application/json",
       [DEMO_ROLE_HEADER]: role,
+      ...(actorUserId ? { [DEMO_USER_ID_HEADER]: actorUserId } : {}),
       ...(extraHeaders ?? {}),
       ...(init?.headers ?? {}),
     },
@@ -330,10 +400,12 @@ async function requestWithHeaders<T>(
 }
 
 async function requestNoContent(path: string, role: DemoRole, init?: RequestInit): Promise<void> {
+  const actorUserId = resolveActorUserId(role);
   const response = await fetch(`${API_BASE_URL}${path}`, {
     headers: {
       "Content-Type": "application/json",
       [DEMO_ROLE_HEADER]: role,
+      ...(actorUserId ? { [DEMO_USER_ID_HEADER]: actorUserId } : {}),
       ...(init?.headers ?? {}),
     },
     ...init,
@@ -347,6 +419,24 @@ async function requestNoContent(path: string, role: DemoRole, init?: RequestInit
 
     throw new Error(errorMessage ?? `Request failed with status ${response.status}`);
   }
+}
+
+function resolveActorUserId(role: DemoRole, extraHeaders?: Record<string, string>): string | undefined {
+  if (role !== "doctor") {
+    return undefined;
+  }
+
+  const explicitHeader = (extraHeaders?.[DEMO_USER_ID_HEADER] ?? "").trim();
+  if (explicitHeader) {
+    return explicitHeader;
+  }
+
+  const session = getStoredDemoSession();
+  if (session?.role === "doctor") {
+    return session.doctorProfileId ?? undefined;
+  }
+
+  return undefined;
 }
 
 export function listPatients(

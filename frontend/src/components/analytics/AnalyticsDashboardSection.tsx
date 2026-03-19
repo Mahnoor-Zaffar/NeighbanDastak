@@ -92,7 +92,7 @@ export function AnalyticsDashboardSection({ role }: AnalyticsDashboardSectionPro
       setStatusBreakdown(null);
       setDoctorWorkload(null);
       setLoading(false);
-      setError("Set your doctor profile ID to load doctor-scoped analytics.");
+      setError("Doctor profile is not linked to this session. Switch demo user and try again.");
       return;
     }
 

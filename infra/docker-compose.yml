@@ -19,7 +19,7 @@ services:
     build:
       context: ../backend
     env_file:
-      - .env.example
+      - ../backend/.env
     ports:
       - "8000:8000"
     depends_on:
@@ -53,6 +53,12 @@ services:
         condition: service_healthy
     volumes:
       - ../frontend:/app
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5173"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
 volumes:
   postgres_data:
